@@ -141,13 +141,20 @@ public class ActivityScheduler
         
     }
     
-    /**Helper function to sort the ArrayList<Activity> entries by finishTime.
+    /**<p>
+     * Helper function to sort the ArrayList<Activity> entries by finishTime. Since
+     * all merge sorts use the same starting process of splitting up a list or vector
+     * of items, the functions have been merged together.
+     * </p>
      * 
      * @param input The ArrayList<Activity> to be sorted.
+     * @param sortType The type of sort performed according to the constants defined
+     * at the top of the ActivityScheduler class.
+     * 
      * @return ArrayList<Activity>
      */
     
-    private ArrayList<Activity> mergeSortByFinishTime(ArrayList<Activity> input){
+    private ArrayList<Activity> mergeSort(ArrayList<Activity> input, int sortType){
     	ArrayList<Activity> output;
     	int length = input.size();
     	int half = length / 2;
@@ -160,9 +167,12 @@ public class ActivityScheduler
     		for(int i = half; i < length; i++) {
     			rightPart.add(input.get(i));
     		}
-    		leftPart = mergeSortByFinishTime(leftPart);
-    		rightPart = mergeSortByFinishTime(rightPart);
-    		output = new ArrayList<Activity>(mergeByFinishTime(leftPart, rightPart));
+    		leftPart = mergeSort(leftPart, sortType);
+    		rightPart = mergeSort(rightPart, sortType);
+    		if(sortType == BY_FINISH_TIME)
+    			output = new ArrayList<Activity>(mergeByFinishTime(leftPart, rightPart));
+    		else
+    			throw new RuntimeException("Unknown sortType. Looks like you have more code to write. Yay!");
     	}
     	else {
     		output = new ArrayList<Activity>(input);
@@ -185,7 +195,7 @@ public class ActivityScheduler
     			else {
     				output.add(leftPart.remove(0));
     			}
-    		}
+    	}
     	while (leftPart.size() > 0) {
     		output.add(leftPart.remove(0));
     	}
@@ -200,7 +210,7 @@ public class ActivityScheduler
     {
         //Create new list of activities
         solution = new ArrayList<Activity>();
-        ArrayList<Activity> sorted = mergeSortByFinishTime(activityList);
+        ArrayList<Activity> sorted = mergeSort(activityList, BY_FINISH_TIME);
         int lastEnd = 0;
         for(int i = 0; i < sorted.size(); i++) {
         	if(sorted.get(i).getStartTime() >= lastEnd) {
@@ -210,11 +220,15 @@ public class ActivityScheduler
         }
     }
     
-    
     private void findSolutionUsingGreedyByLength_SLOW()
     {
                 //Implement your solution here.
-       solution = new ArrayList<Activity>(); 
+       solution = new ArrayList<Activity>();
+       ArrayList<Activity> sorted = mergeSort(activityList, BY_LENGTH_SIMPLE);
+       //Temporary test code
+       for(int i = 0; i < sorted.size(); i++) {
+    	   System.out.println(sorted.get(i));
+       }
     }
 
     
