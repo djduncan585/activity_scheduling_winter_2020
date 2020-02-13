@@ -1,7 +1,24 @@
+/*
+ Dave Duncan
+ CSC 406 Algorithms & Data Structures
+ Dr. Jerry Ajay
+ Homework 1
+ 18 February 2020
+ */
+
 package activityScheduler;
 
 import java.util.*;
 
+/**
+@author Dave Duncan
+@version 1.0
+<p>
+This is Mr. Duncan's implementation of the ActivityScheduler class 
+as specified in Homework 1, based on assignment code that came from
+Dr. Ajay.
+</p>
+*/
 public class ActivityScheduler
 {
     /** List of the Activities that we want to schedule */
@@ -107,11 +124,12 @@ public class ActivityScheduler
         activityList.add (new Activity(8,11));
         activityList.add (new Activity(6,10));       
         activityList.add (new Activity(0,7));      
-        activityList.add (new Activity(3,11));   
+        activityList.add (new Activity(3,11));
 
         /** create a large input set for this scheduling problem, filled with random data */
-        activityList = new ArrayList<Activity>();
-        Random generator = new Random( 314159 );   /** "seed" the random number generator with PI */
+        /*activityList = new ArrayList<Activity>();
+        Random generator = new Random( 314159 );   // "seed" the random number generator with PI
+        
         for ( int i = 0; i < TIME_RANGE; i++ ) {
             int startTime = generator.nextInt ( TIME_RANGE );
             int finishTime = (int) ( startTime + 1 + (Math.sqrt(TIME_RANGE) * 0.2 * generator.nextDouble ( )) );
@@ -119,14 +137,77 @@ public class ActivityScheduler
 
             Activity nextActivity = new Activity( startTime, finishTime ); 
             activityList.add (nextActivity);
-        }
+        }*/
+        
+    }
+    
+    /**Helper function to sort the ArrayList<Activity> entries by finishTime.
+     * 
+     * @param input The ArrayList<Activity> to be sorted.
+     * @return ArrayList<Activity>
+     */
+    
+    private ArrayList<Activity> mergeSortByFinishTime(ArrayList<Activity> input){
+    	ArrayList<Activity> output;
+    	int length = input.size();
+    	int half = length / 2;
+    	if (length > 1) {
+    		ArrayList<Activity> leftPart = new ArrayList<Activity>();
+    		for(int i = 0; i < half; i++) {
+    			leftPart.add(input.get(i));
+    		}
+    		ArrayList<Activity> rightPart = new ArrayList<Activity>();
+    		for(int i = half; i < length; i++) {
+    			rightPart.add(input.get(i));
+    		}
+    		leftPart = mergeSortByFinishTime(leftPart);
+    		rightPart = mergeSortByFinishTime(rightPart);
+    		output = new ArrayList<Activity>(mergeByFinishTime(leftPart, rightPart));
+    	}
+    	else {
+    		output = new ArrayList<Activity>(input);
+    	}
+    	return output;
+    }
+    
+    /**Helper function to complete the merge sorts by finish time performed in this exercise.
+     * 
+     * @param leftPart One of the two ArrayList<Activity> objects to be merged.
+     * @param rightPart The second of the two ArrayList<Activity> objects to be merged.
+     * @return ArrayList<Activity>
+     */
+    private ArrayList<Activity> mergeByFinishTime(ArrayList<Activity> leftPart, ArrayList<Activity> rightPart){
+    	ArrayList<Activity> output = new ArrayList<Activity>();
+    	while ((leftPart.size() > 0) && (rightPart.size() > 0)) {
+    			if(leftPart.get(0).compareTo(rightPart.get(0)) > 0) {
+    				output.add(rightPart.remove(0));
+    			}
+    			else {
+    				output.add(leftPart.remove(0));
+    			}
+    		}
+    	while (leftPart.size() > 0) {
+    		output.add(leftPart.remove(0));
+    	}
+    	while (rightPart.size() > 0) {
+    		output.add(rightPart.remove(0));
+    	}
+    	return output;	
     }
 
 
     private void findSolutionUsingGreedyByFinishTime()
     {
-                //Implement your solution here.
-        solution = new ArrayList<Activity>(); 
+        //Create new list of activities
+        solution = new ArrayList<Activity>();
+        ArrayList<Activity> sorted = mergeSortByFinishTime(activityList);
+        int lastEnd = 0;
+        for(int i = 0; i < sorted.size(); i++) {
+        	if(sorted.get(i).getStartTime() >= lastEnd) {
+        		solution.add(new Activity(sorted.get(i).getStartTime(), sorted.get(i).getFinishTime()));
+        		lastEnd = sorted.get(i).getFinishTime();
+        	}
+        }
     }
     
     
@@ -151,8 +232,10 @@ public class ActivityScheduler
     {
         public int compare ( Activity first, Activity second )
         {
+        	//Finish time for first is before start time for second
             if ( first.getFinishTime() <= second.getStartTime() )
                 return -1;
+            //Finish time for second is before start time for first
             else if ( first.getStartTime() >= second.getFinishTime() )
                 return 1;
             else
@@ -210,7 +293,7 @@ public class ActivityScheduler
     }
 
     
-    /** Display the activities that were successfuly scheduled */
+    /** Display the activities that were successfully scheduled */
     public String toString()
     {
         if ( solution.isEmpty() )
