@@ -10,6 +10,8 @@ package activityScheduler;
 
 import java.util.*;
 
+//import activityScheduler.ActivityScheduler.Activity;
+
 /**
 @author Dave Duncan
 @version 1.0
@@ -35,7 +37,9 @@ public class ActivityScheduler
     
     public static final int BY_FINISH_TIME = 0;
     public static final int BY_LENGTH_SIMPLE = 1;    
-    public static final int BY_LENGTH_SMART = 2; 
+    public static final int BY_LENGTH_SMART = 2;
+    
+    OverlapComparator overlapcomparator = new OverlapComparator();
     
     
     public static void main ( String[] args )
@@ -171,6 +175,9 @@ public class ActivityScheduler
     		rightPart = mergeSort(rightPart, sortType);
     		if(sortType == BY_FINISH_TIME)
     			output = new ArrayList<Activity>(mergeByFinishTime(leftPart, rightPart));
+    		else if(sortType == BY_LENGTH_SIMPLE) {
+    			output = new ArrayList<Activity>(mergeByLengthSimple(leftPart, rightPart));
+    		}
     		else
     			throw new RuntimeException("Unknown sortType. Looks like you have more code to write. Yay!");
     	}
@@ -205,7 +212,12 @@ public class ActivityScheduler
     	return output;	
     }
 
-
+    /**
+     * Part 1 of the assignment.
+     * After sorting of the activities by finish time (efficient merge sort), they are
+     * added to the schedule by a linear comparison with the last activity finish time
+     * inserted (O(n), nice!)
+     */
     private void findSolutionUsingGreedyByFinishTime()
     {
         //Create new list of activities
@@ -220,14 +232,64 @@ public class ActivityScheduler
         }
     }
     
+    /**
+     * Helper function for a merge sort that sorts firstly in order of increasing length,
+     * secondly in order of finish time.
+     * @param leftPart One of the two lists to be merged.
+     * @param rightPart The other of the two lists to be merged.
+     * @return ArrayList<Activity>
+     */
+    private ArrayList<Activity> mergeByLengthSimple(ArrayList<Activity> leftPart, ArrayList<Activity> rightPart){
+    	ArrayList<Activity> output = new ArrayList<Activity>();
+    	while ((leftPart.size() > 0) && (rightPart.size() > 0)) {
+    		//This is where the merge by minimal size followed by end time happens
+    		if(leftPart.get(0).getActivityLength() > rightPart.get(0).getActivityLength()){
+    			output.add(rightPart.remove(0));
+    		}
+    		else if(leftPart.get(0).getActivityLength() < rightPart.get(0).getActivityLength()) {
+    			output.add(leftPart.remove(0));
+    		}
+    		//After this point we know that the left and right part items being compared are the same length,
+    		//so we are now comparing for finish time
+    		else if(leftPart.get(0).compareTo(rightPart.get(0)) > 0) {
+				output.add(rightPart.remove(0));
+			}
+    		else {//leftPart's finish time <= rightPart's finish time
+				output.add(leftPart.remove(0));
+			}
+		}
+		while (leftPart.size() > 0) {
+			output.add(leftPart.remove(0));
+		}
+		while (rightPart.size() > 0) {
+			output.add(rightPart.remove(0));
+		}
+    	return output;
+    }
+    /**
+     * Part 2 of the assignment. After the activities are sorted first by increasing length then by finish time
+     * (efficient merge sort algorithm), they are placed in the schedule if there is no overlap with existing
+     * activities (not-so-efficient brute force algorithm. O(n^2) :P )
+     */
     private void findSolutionUsingGreedyByLength_SLOW()
     {
-                //Implement your solution here.
        solution = new ArrayList<Activity>();
        ArrayList<Activity> sorted = mergeSort(activityList, BY_LENGTH_SIMPLE);
-       //Temporary test code
-       for(int i = 0; i < sorted.size(); i++) {
-    	   System.out.println(sorted.get(i));
+     //iterator candidate keeps track of the object we are attempting to add to the schedule
+       for(int candidate = 0; candidate < sorted.size(); candidate++) {
+    	   //iterator scheduledtask keeps track of tasks already added to the schedule
+    	   boolean overlaps = false;
+    	   for(int scheduledtask = 0; scheduledtask < solution.size(); scheduledtask++) {
+    		   //If the candidate overlaps with any of the already added tasks, don't add it
+    		   if(overlapcomparator.compare(sorted.get(candidate), ((ArrayList<Activity>)solution).get(scheduledtask)) == 0) {
+    			   overlaps = true;
+    			   break;
+    		   }
+    	   }
+    	   if(!overlaps) {
+    		   solution.add(sorted.get(candidate));
+    	   }
+    	   
        }
     }
 
@@ -236,7 +298,7 @@ public class ActivityScheduler
     private void findSolutionUsingGreedyByLength_FAST()
     {
                 //Implement your solution here.
-        solution = new ArrayList<Activity>(); 
+        solution = new ArrayList<Activity>();
     }
 
     
@@ -274,7 +336,7 @@ public class ActivityScheduler
 
     
     /** This class represents a single Activity, with its own startTime and finishTime */
-    private class Activity implements Comparable<Activity>
+    public class Activity implements Comparable<Activity>
     {
         private int startTime;
         private int finishTime;
