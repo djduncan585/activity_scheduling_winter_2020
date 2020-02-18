@@ -18,7 +18,12 @@ import java.util.*;
 <p>
 This is Mr. Duncan's implementation of the ActivityScheduler class 
 as specified in Homework 1, based on assignment code that came from
-Dr. Ajay.
+Dr. Ajay. Today, we explore smarter algorithms and data structures
+for faster execution as two Greedy By Activity Length top fuel
+dragsters battle for the cup. Will the old reliable brute force
+insertion dominate, or will it lose to the leaner, hungrier binary
+tree insertion and traversal? (I think you already know the result.)
+Start your engines!
 </p>
 */
 public class ActivityScheduler
@@ -40,6 +45,7 @@ public class ActivityScheduler
     public static final int BY_LENGTH_SMART = 2;
     
     OverlapComparator overlapcomparator = new OverlapComparator();
+    LengthComparator lengthcomparator = new LengthComparator();
     
     
     public static void main ( String[] args )
@@ -131,7 +137,7 @@ public class ActivityScheduler
         activityList.add (new Activity(3,11));
 
         /** create a large input set for this scheduling problem, filled with random data */
-        /*activityList = new ArrayList<Activity>();
+        activityList = new ArrayList<Activity>();
         Random generator = new Random( 314159 );   // "seed" the random number generator with PI
         
         for ( int i = 0; i < TIME_RANGE; i++ ) {
@@ -141,7 +147,7 @@ public class ActivityScheduler
 
             Activity nextActivity = new Activity( startTime, finishTime ); 
             activityList.add (nextActivity);
-        }*/
+        }
         
     }
     
@@ -175,8 +181,8 @@ public class ActivityScheduler
     		rightPart = mergeSort(rightPart, sortType);
     		if(sortType == BY_FINISH_TIME)
     			output = new ArrayList<Activity>(mergeByFinishTime(leftPart, rightPart));
-    		else if(sortType == BY_LENGTH_SIMPLE) {
-    			output = new ArrayList<Activity>(mergeByLengthSimple(leftPart, rightPart));
+    		else if(sortType == BY_LENGTH_SIMPLE || sortType == BY_LENGTH_SMART) {
+    			output = new ArrayList<Activity>(mergeByLength(leftPart, rightPart));
     		}
     		else
     			throw new RuntimeException("Unknown sortType. Looks like you have more code to write. Yay!");
@@ -239,14 +245,14 @@ public class ActivityScheduler
      * @param rightPart The other of the two lists to be merged.
      * @return ArrayList<Activity>
      */
-    private ArrayList<Activity> mergeByLengthSimple(ArrayList<Activity> leftPart, ArrayList<Activity> rightPart){
+    private ArrayList<Activity> mergeByLength(ArrayList<Activity> leftPart, ArrayList<Activity> rightPart){
     	ArrayList<Activity> output = new ArrayList<Activity>();
     	while ((leftPart.size() > 0) && (rightPart.size() > 0)) {
     		//This is where the merge by minimal size followed by end time happens
-    		if(leftPart.get(0).getActivityLength() > rightPart.get(0).getActivityLength()){
+    		if(lengthcomparator.compare(leftPart.get(0), rightPart.get(0)) > 0){
     			output.add(rightPart.remove(0));
     		}
-    		else if(leftPart.get(0).getActivityLength() < rightPart.get(0).getActivityLength()) {
+    		else if(lengthcomparator.compare(leftPart.get(0), rightPart.get(0)) < 0){
     			output.add(leftPart.remove(0));
     		}
     		//After this point we know that the left and right part items being compared are the same length,
@@ -294,11 +300,23 @@ public class ActivityScheduler
     }
 
     
-    
+    /**
+     * Part 3 of the assignment. After the activities are sorted as in Part 2, they are placed into a binary tree
+     * (O(n log n) best case, O(n^2) worst case), then extracted to output.
+     */
     private void findSolutionUsingGreedyByLength_FAST()
     {
-                //Implement your solution here.
         solution = new ArrayList<Activity>();
+        Activity nextActivity = null;
+        ActivityTree root = new ActivityTree();
+        //Insert all the activities into a binary tree
+        ArrayList<Activity> sorted = mergeSort(activityList, BY_LENGTH_SMART);
+        while(sorted.size() > 0) {
+        	nextActivity = sorted.remove(0);
+        	root.attemptInsert(nextActivity);
+        }
+        //Traverse the binary tree and get it all back
+        root.traverseTheTreeAndPutTheActivitiesIn((ArrayList<Activity>)solution);
     }
 
     
@@ -366,6 +384,72 @@ public class ActivityScheduler
             else
                 return 0;
         }
+    }
+    
+    /**
+     * This class represents a binary tree for part 3 of the assignment. Since the
+     * Activities here are not sorted primarily by time, this will give improved
+     * performance over the brute force insertion of Part 2, with the same order
+     * of complexity as a Quick Sort (O(n log n) best case, O(n^2) worst case.)
+     */
+    public class ActivityTree {
+    	private Activity node = null;
+    	private ActivityTree earlier = null;
+    	private ActivityTree later = null;
+    	/**
+    	 * Attempts to insert an Activity in this ActivityTree. If it overlaps with
+    	 * any of the existing activities in the tree, it will not be inserted. If
+    	 * there is room for it, it will be inserted in the appropriate branch/leaf
+    	 * recursively.
+    	 * @param a The activity we are attempting to insert in the ActivityTree.
+    	 */
+    	public void attemptInsert(Activity a) {
+    		//check if there's already an Activity assigned to this node.
+    		//If not, put the Activity here.
+    		if (this.node == null){
+    			this.node = new Activity(a.getStartTime(), a.getFinishTime());
+    		}
+    		//If there's already an Activity here, test it against the candidate
+    		//for insertion. If it's earlier, insert a new ActivityTree node on the
+    		//earlier branch if needed. Then recursively try to insert on the earlier
+    		//branch.
+    		else if (overlapcomparator.compare(a, this.node) < 0) {
+    			if (this.earlier == null) {
+    				this.earlier = new ActivityTree();
+    			}
+    			this.earlier.attemptInsert(a);
+    		}
+    		//If it's later, insert a new ActivityTree node on the
+    		//later branch if needed. Then recursively try to insert on the later
+    		//branch.
+    		else if (overlapcomparator.compare(a, this.node) > 0) {
+    			if (this.later == null) {
+    				this.later = new ActivityTree();
+    			}
+    			this.later.attemptInsert(a);
+    		}
+    		//If it overlaps, let it drop to the rocks below. Splat!
+    	}
+    	
+    	/**
+    	 * Performs an in-order traversal of this ActivityTree, successively adding
+    	 * Activities to the ArrayList given as an argument to the function.
+    	 * @param a The ArrayList<Activity> that you wish to put the contents of the
+    	 * ActivityTree in.
+    	 */
+    	public void traverseTheTreeAndPutTheActivitiesIn(ArrayList<Activity> a){
+    		//Go down the left side
+    		if(this.earlier != null) {
+    			earlier.traverseTheTreeAndPutTheActivitiesIn(a);
+    		}
+    		//Then add the value in the node
+    		a.add(this.node);
+    		//Then go down the right side.
+    		if(this.later != null) {
+    			later.traverseTheTreeAndPutTheActivitiesIn(a);
+    		}
+    		//And you are done!
+    	}
     }
 
     
